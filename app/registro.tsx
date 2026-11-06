@@ -650,11 +650,10 @@ export default function Registro() {
         )}
 
         <Text style={styles.seccion}>5. Contacto de emergencia</Text>
-
         <Campo
           titulo="Nombre del contacto (opcional)"
           valor={contactoNombre}
-          cambiar={setContactoNombre}
+          cambiar={(texto) => setContactoNombre(texto.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, ""))}
         />
         <Campo
           titulo="Teléfono del contacto (opcional)"

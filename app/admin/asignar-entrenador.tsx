@@ -83,7 +83,6 @@ export default function AsignarEntrenador() {
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         
-      
         <Text style={styles.label}>1. SELECCIONA UN CLIENTE</Text>
         {clientes.map((c) => (
           <TouchableOpacity

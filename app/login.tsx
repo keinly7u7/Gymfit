@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { API_URL } from "../constants/api";
 
@@ -29,6 +30,12 @@ export default function LoginScreen() {
       return;
     }
 
+    const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!regexCorreo.test(correo.trim())) {
+      Alert.alert("Correo inválido", "Por favor ingresa un correo electrónico válido (ejemplo@dominio.com).");
+      return;
+    }
+
     setCargando(true);
 
     try {
@@ -42,7 +49,6 @@ export default function LoginScreen() {
       });
 
       const datos = await respuesta.json();
-      console.log("LOGIN RESPUESTA:", JSON.stringify(datos, null, 2));
 
       if (!respuesta.ok) {
         Alert.alert(
@@ -72,14 +78,12 @@ export default function LoginScreen() {
 
       const rolNormalizado = rol.trim().toLowerCase();
 
-      // 1. ADMINISTRADOR
       if (rolNormalizado === "administrador" || rolNormalizado === "admin") {
         Alert.alert("¡Bienvenido, administrador!", `Hola ${usuario.nombres ?? ""}.`);
         router.replace({ pathname: "/dashboard", params: { access_token: token } } as any);
         return;
       }
 
-      // 2. ENTRENADOR
       if (rolNormalizado === "entrenador" || rolNormalizado === "trainer") {
         Alert.alert("¡Bienvenido, entrenador!", `Hola ${usuario.nombres ?? "Entrenador"}.`);
         router.replace({
@@ -93,9 +97,7 @@ export default function LoginScreen() {
         return;
       }
 
-      // 3. CLIENTE
       if (datos.acceso_dashboard === true) {
-        // Membresía activa -> Dashboard
         router.replace({
           pathname: "/(tabs)/dashboard_usuario",
           params: {
@@ -108,14 +110,13 @@ export default function LoginScreen() {
             estado_membresia: estado,
             fecha_fin: fechaFin ?? "",
             access_token: token,
-            beneficios: JSON.stringify(plan.beneficios ?? []), // <-- AQUÍ SE ENVÍAN LOS BENEFICIOS
+            beneficios: JSON.stringify(plan.beneficios ?? []),
           },
         });
         return;
       }
 
       if (idMembresia) {
-        // Membresía pendiente -> Pago
         router.replace({
           pathname: "/pago" as any,
           params: {
@@ -133,7 +134,6 @@ export default function LoginScreen() {
         return;
       }
 
-      // Sin membresía -> Planes
       Alert.alert("Sin membresía", "Por favor selecciona un plan.");
       router.replace("/planes");
 
@@ -145,68 +145,80 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.contenedor}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity style={styles.volver} onPress={() => router.back()} disabled={cargando}>
-          <Text style={styles.textoVolver}>‹ Volver</Text>
-        </TouchableOpacity>
-
-        <View style={styles.encabezado}>
-          <Text style={styles.logo}>GYMFIT</Text>
-          <Text style={styles.subtitulo}>TU ENTRENAMIENTO COMIENZA AQUÍ</Text>
-        </View>
-
-        <View style={styles.tarjeta}>
-          <Text style={styles.titulo}>Iniciar sesión</Text>
-          <Text style={styles.descripcion}>Ingresa a tu cuenta para continuar.</Text>
-
-          <Text style={styles.etiqueta}>Correo electrónico</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="ejemplo@correo.com"
-            placeholderTextColor="#777777"
-            value={correo}
-            onChangeText={setCorreo}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!cargando}
-          />
-
-          <Text style={styles.etiqueta}>Contraseña</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ingresa tu contraseña"
-            placeholderTextColor="#777777"
-            value={contrasena}
-            onChangeText={setContrasena}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!cargando}
-          />
-
-          <TouchableOpacity
-            style={[styles.boton, cargando && styles.botonDesactivado]}
-            onPress={iniciarSesion}
-            disabled={cargando}
-          >
-            {cargando ? <ActivityIndicator color="#111111" /> : <Text style={styles.textoBoton}>INGRESAR</Text>}
+    <SafeAreaView style={styles.contenedor}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
+          <TouchableOpacity style={styles.volver} onPress={() => router.back()} disabled={cargando}>
+            <Text style={styles.textoVolver}>‹ Volver</Text>
           </TouchableOpacity>
 
-          <Text style={styles.nota}>
-            Si tu membresía tiene un pago pendiente, podrás consultar su información y continuar con el proceso de pago después de iniciar sesión.
-          </Text>
+          <View style={styles.encabezado}>
+            <Text style={styles.logo}>GYMFIT</Text>
+            <Text style={styles.subtitulo}>TU ENTRENAMIENTO COMIENZA AQUÍ</Text>
+          </View>
 
-          <TouchableOpacity style={styles.botonVolver} onPress={() => router.replace("/")} disabled={cargando}>
-            <Text style={styles.textoSecundario}>Volver al inicio</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={styles.tarjeta}>
+            <Text style={styles.titulo}>Iniciar sesión</Text>
+            <Text style={styles.descripcion}>Ingresa a tu cuenta para continuar.</Text>
+
+            <Text style={styles.etiqueta}>Correo electrónico</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="ejemplo@correo.com"
+              placeholderTextColor="#777777"
+              value={correo}
+              onChangeText={setCorreo}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!cargando}
+            />
+
+            <Text style={styles.etiqueta}>Contraseña</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ingresa tu contraseña"
+              placeholderTextColor="#777777"
+              value={contrasena}
+              onChangeText={setContrasena}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!cargando}
+            />
+
+            <TouchableOpacity
+              style={[styles.boton, cargando && styles.botonDesactivado]}
+              onPress={iniciarSesion}
+              disabled={cargando}
+            >
+              {cargando ? <ActivityIndicator color="#111111" /> : <Text style={styles.textoBoton}>INGRESAR</Text>}
+            </TouchableOpacity>
+
+            {/* RECORDATORIO DE REGISTRO COMO ENLACE */}
+            <View style={styles.avisoRegistroLink}>
+              <Text style={styles.textoAvisoRegistroLink}>
+                ¿Aún no tienes cuenta?{" "}
+              </Text>
+              <TouchableOpacity onPress={() => router.push("/registro")} disabled={cargando}>
+                <Text style={styles.enlaceRegistro}>Regístrate aquí</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.nota}>
+              Si tu membresía tiene un pago pendiente, podrás consultar su información y continuar con el proceso de pago después de iniciar sesión.
+            </Text>
+
+            <TouchableOpacity style={styles.botonVolver} onPress={() => router.replace("/")} disabled={cargando}>
+              <Text style={styles.textoSecundario}>Volver al inicio</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -226,6 +238,23 @@ const styles = StyleSheet.create({
   boton: { backgroundColor: "#CFFF00", borderRadius: 10, minHeight: 52, alignItems: "center", justifyContent: "center", marginTop: 6 },
   botonDesactivado: { opacity: 0.7 },
   textoBoton: { color: "#111111", fontSize: 16, fontWeight: "900", letterSpacing: 1 },
+  avisoRegistroLink: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginTop: 25,
+  },
+  textoAvisoRegistroLink: {
+    color: "#AAAAAA",
+    fontSize: 14,
+  },
+  enlaceRegistro: {
+    color: "#CFFF00",
+    fontSize: 14,
+    fontWeight: "bold",
+    textDecorationLine: "underline",
+  },
   nota: { color: "#999999", fontSize: 12, lineHeight: 19, textAlign: "center", marginTop: 22 },
   botonVolver: { alignItems: "center", marginTop: 20 },
   textoSecundario: { color: "#CFFF00", fontSize: 14 },

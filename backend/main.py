@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import date, datetime, timedelta
 import secrets
 from typing import Optional, List
@@ -22,10 +23,14 @@ ALGORITHM = "HS256"
 TOKEN_HORAS = 24
 _hasher = PasswordHasher()
 
+# --- CONFIGURACIÓN DE LA BASE DE DATOS PARA RENDER/AIVEN ---
+# Si estamos en Render, el host NO será 127.0.0.1
+DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
+
 _pool = pooling.MySQLConnectionPool(
     pool_name="gymfit_pool",
     pool_size=5,
-    host=os.getenv("DB_HOST", "127.0.0.1"),
+    host=DB_HOST,
     port=int(os.getenv("DB_PORT", 3306)),
     user=os.getenv("DB_USER", "root"),
     password=os.getenv("DB_PASS", ""),
@@ -481,6 +486,7 @@ def asignar_entrenador(datos: dict, u=Depends(requiere_rol("administrador")), db
         raise HTTPException(500, f"Error al asignar: {e}")
     finally:
         cur.close()
+
 @app.get("/api/mis-rutinas")
 def mis_rutinas(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
@@ -512,6 +518,7 @@ def mis_rutinas(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
 
     cur.close()
     return personalizadas
+
 @app.post("/api/registrar-mi-asistencia", status_code=201)
 def registrar_mi_asistencia(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
@@ -532,6 +539,7 @@ def registrar_mi_asistencia(u=Depends(requiere_rol("cliente")), db=Depends(get_d
     db.commit()
     cur.close()
     return {"mensaje": "¡Asistencia registrada! Buen entrenamiento."}
+
 @app.get("/api/cliente/dashboard")
 def dashboard_cliente(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
@@ -563,6 +571,7 @@ def dashboard_cliente(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
         "dias_activos": asistencias,
         "rutinas_completadas": rutinas_completadas
     }
+
 @app.get("/api/entrenador/estadisticas")
 def estadisticas_entrenador(u=Depends(requiere_rol("entrenador")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
@@ -586,6 +595,16 @@ def estadisticas_entrenador(u=Depends(requiere_rol("entrenador")), db=Depends(ge
         "rutinas": rutinas,
         "asignaciones": asignaciones
     }
+
+@app.get("/api/entrenador/cliente/{id_cliente}")
+def detalle_cliente_entrenador(id_cliente: int, u=Depends(requiere_rol("entrenador")), db=Depends(get_db)):
+    cur = db.cursor(dictionary=True)
+    # Verificar que el cliente esté asignado a este entrenador
+    cur.execute("SELECT 1 FROM entrenador_clientes WHERE id_entrenador=%s AND id_cliente=%s AND estado='activa'", (u["id_usuario"], id_cliente))
+    if not cur.fetchone():
+        cur.close()
+        raise HTTPException(403, "Este cliente no está asignado a ti")
+
 @app.get("/api/entrenador/cliente/{id_cliente}")
 def detalle_cliente_entrenador(id_cliente: int, u=Depends(requiere_rol("entrenador")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
@@ -627,6 +646,7 @@ def detalle_cliente_entrenador(id_cliente: int, u=Depends(requiere_rol("entrenad
         "asistencias": asistencias,
         "historial": historial
     }
+
 @app.delete("/api/entrenador/rutinas/{id_rutina}")
 def eliminar_rutina(id_rutina: int, u=Depends(requiere_rol("entrenador")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
@@ -648,6 +668,7 @@ def eliminar_rutina(id_rutina: int, u=Depends(requiere_rol("entrenador")), db=De
         raise HTTPException(500, f"Error: {e}")
     finally:
         cur.close()
+
 class CrearEntrenadorIn(BaseModel):
     nombres: str
     apellidos: str
@@ -680,6 +701,7 @@ def crear_entrenador(datos: CrearEntrenadorIn, u=Depends(requiere_rol("administr
         raise HTTPException(500, f"Error: {e}")
     finally:
         cur.close()
+
 @app.get("/api/admin/asistencias")
 def listar_asistencias_admin(u=Depends(requiere_rol("administrador")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
@@ -693,6 +715,7 @@ def listar_asistencias_admin(u=Depends(requiere_rol("administrador")), db=Depend
     r = cur.fetchall()
     cur.close()
     return r
+
 @app.get("/api/admin/reportes")
 def reportes(u=Depends(requiere_rol("administrador")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
@@ -730,6 +753,7 @@ def reportes(u=Depends(requiere_rol("administrador")), db=Depends(get_db)):
         "asistencias_mes": asistencias_mes,
         "rutinas_mes": rutinas_mes
     }
+
 @app.get("/api/admin/membresias")
 def listar_membresias_admin(u=Depends(requiere_rol("administrador")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
@@ -880,17 +904,3 @@ def reservar_cita(datos: dict, u=Depends(requiere_rol("cliente")), db=Depends(ge
         raise HTTPException(500, f"Error: {e}")
     finally:
         cur.close()
-        import time
-from globalhost import GlobalHostApp
-
-if __name__ == "__main__":
-    host = GlobalHostApp()
-    # Inicia FastAPI y crea el túnel
-    if host.bg_launch(framework="fastapi", app="main:app", port=8000):
-        print(f"\n🔗 TU URL PÚBLICA ES: {host.get_url()}\n")
-        print("Copia esa URL y pégala en tu archivo constants/api.ts del frontend.")
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            host.stop()

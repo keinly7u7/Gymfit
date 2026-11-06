@@ -100,7 +100,7 @@ export default function PagoScreen() {
         "El pago de demostración se registró correctamente y tu membresía está activa.",
         [
           {
-            text: "Entrar al dashboard",
+            text: "continuar",
             onPress: () => {
               router.replace({
                 pathname: "/dashboard_usuario" as any,

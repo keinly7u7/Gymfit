@@ -21,6 +21,11 @@ export default function CrearEntrenador() {
   const [numeroDocumento, setNumeroDocumento] = useState("");
   const [cargando, setCargando] = useState(false);
 
+  // Función para permitir solo letras (incluye tildes y ñ) y espacios
+  const soloLetras = (texto: string) => {
+    return texto.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, "");
+  };
+
   // Formatear la fecha automáticamente con guiones (AAAA-MM-DD)
   const formatearFecha = (texto: string) => {
     const digitos = texto.replace(/\D/g, "").slice(0, 8);
@@ -36,9 +41,23 @@ export default function CrearEntrenador() {
   };
 
   const guardar = async () => {
-    // Validaciones
+    // Validaciones de campos vacíos
     if (!nombres || !apellidos || !correo || !telefono || !contrasena || !fechaNacimiento || !numeroDocumento) {
       Alert.alert("Atención", "Completa todos los campos obligatorios.");
+      return;
+    }
+
+    // Validar que nombres y apellidos no tengan números (doble seguridad)
+    const tieneNumeros = /[0-9]/.test(nombres) || /[0-9]/.test(apellidos);
+    if (tieneNumeros) {
+      Alert.alert("Datos inválidos", "Los nombres y apellidos no pueden contener números.");
+      return;
+    }
+
+    // Validar formato de correo electrónico básico
+    const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!regexCorreo.test(correo)) {
+      Alert.alert("Correo inválido", "Por favor ingresa un correo electrónico válido (ejemplo@dominio.com).");
       return;
     }
 
@@ -117,22 +136,63 @@ export default function CrearEntrenador() {
         <Text style={styles.subtitulo}>Completa los datos para registrar un nuevo entrenador.</Text>
 
         <Text style={styles.label}>Nombres *</Text>
-        <TextInput style={styles.input} value={nombres} onChangeText={setNombres} placeholder="Nombres" placeholderTextColor="#666" />
+        <TextInput 
+          style={styles.input} 
+          value={nombres} 
+          onChangeText={(texto) => setNombres(soloLetras(texto))} 
+          placeholder="Nombres" 
+          placeholderTextColor="#666" 
+        />
 
         <Text style={styles.label}>Apellidos *</Text>
-        <TextInput style={styles.input} value={apellidos} onChangeText={setApellidos} placeholder="Apellidos" placeholderTextColor="#666" />
+        <TextInput 
+          style={styles.input} 
+          value={apellidos} 
+          onChangeText={(texto) => setApellidos(soloLetras(texto))} 
+          placeholder="Apellidos" 
+          placeholderTextColor="#666" 
+        />
 
         <Text style={styles.label}>Correo electrónico *</Text>
-        <TextInput style={styles.input} value={correo} onChangeText={setCorreo} placeholder="correo@ejemplo.com" keyboardType="email-address" autoCapitalize="none" placeholderTextColor="#666" />
+        <TextInput 
+          style={styles.input} 
+          value={correo} 
+          onChangeText={setCorreo} 
+          placeholder="correo@ejemplo.com" 
+          keyboardType="email-address" 
+          autoCapitalize="none" 
+          placeholderTextColor="#666" 
+        />
 
         <Text style={styles.label}>Teléfono (10 dígitos) *</Text>
-        <TextInput style={styles.input} value={telefono} onChangeText={(t) => setTelefono(t.replace(/\D/g, "").slice(0, 10))} placeholder="3001234567" keyboardType="phone-pad" placeholderTextColor="#666" />
+        <TextInput 
+          style={styles.input} 
+          value={telefono} 
+          onChangeText={(t) => setTelefono(t.replace(/\D/g, "").slice(0, 10))} 
+          placeholder="3001234567" 
+          keyboardType="phone-pad" 
+          placeholderTextColor="#666" 
+        />
 
         <Text style={styles.label}>Contraseña *</Text>
-        <TextInput style={styles.input} value={contrasena} onChangeText={setContrasena} placeholder="Mínimo 6 caracteres" secureTextEntry placeholderTextColor="#666" />
+        <TextInput 
+          style={styles.input} 
+          value={contrasena} 
+          onChangeText={setContrasena} 
+          placeholder="Mínimo 6 caracteres" 
+          secureTextEntry 
+          placeholderTextColor="#666" 
+        />
 
         <Text style={styles.label}>Fecha de nacimiento (AAAA-MM-DD) *</Text>
-        <TextInput style={styles.input} value={fechaNacimiento} onChangeText={formatearFecha} placeholder="2000-01-01" keyboardType="numeric" placeholderTextColor="#666" />
+        <TextInput 
+          style={styles.input} 
+          value={fechaNacimiento} 
+          onChangeText={formatearFecha} 
+          placeholder="2000-01-01" 
+          keyboardType="numeric" 
+          placeholderTextColor="#666" 
+        />
 
         <Text style={styles.label}>Tipo de documento *</Text>
         <View style={styles.filaDocs}>
