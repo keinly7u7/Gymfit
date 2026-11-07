@@ -2,15 +2,11 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
+  Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 import { API_URL } from "../constants/api";
@@ -449,7 +445,7 @@ export default function Registro() {
   return (
     <KeyboardAvoidingView
       style={styles.pantalla}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
         contentContainerStyle={styles.contenido}
@@ -731,7 +727,7 @@ const styles = StyleSheet.create({
   },
   contenido: {
     padding: 22,
-    paddingBottom: 45,
+    paddingBottom: 120,
   },
   volver: {
     alignSelf: "flex-start",

@@ -218,10 +218,7 @@ export default function HomeScreen() {
 
       {/* MENÚ INFERIOR */}
       <View style={styles.bottomMenu}>
-        <TouchableOpacity style={styles.menuItem} onPress={() => router.replace("/")}>
-          <Ionicons name="home" size={23} color="#cfff00" />
-          <Text style={styles.menuTextActive}>INICIO</Text>
-        </TouchableOpacity>
+        
 
         <TouchableOpacity style={styles.menuItem} onPress={() => router.push("/planes")}>
           <Ionicons name="card-outline" size={23} color="#555555" />

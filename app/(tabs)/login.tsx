@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { API_URL } from "../constants/api";
+import { API_URL } from "../../constants/api";
 
 export default function LoginScreen() {
   const [correo, setCorreo] = useState("");
@@ -99,7 +99,7 @@ export default function LoginScreen() {
 
       if (datos.acceso_dashboard === true) {
         router.replace({
-          pathname: "/(tabs)/dashboard_usuario",
+          pathname: "/dashboard_usuario",
           params: {
             nombre_usuario: `${usuario.nombres ?? ""} ${usuario.apellidos ?? ""}`.trim(),
             correo_usuario: usuario.correo ?? "",
@@ -146,9 +146,9 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.contenedor}>
-      <KeyboardAvoidingView
+            <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
           <TouchableOpacity style={styles.volver} onPress={() => router.back()} disabled={cargando}>

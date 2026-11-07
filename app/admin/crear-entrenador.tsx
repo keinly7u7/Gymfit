@@ -2,7 +2,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView, // <-- 1. AGREGADO
+  Platform, // <-- 2. AGREGADO
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { API_URL } from "../../constants/api";
 
@@ -126,114 +137,126 @@ export default function CrearEntrenador() {
 
   return (
     <SafeAreaView style={styles.contenedor}>
-      <ScrollView contentContainerStyle={styles.contenido}>
-        <TouchableOpacity style={styles.volver} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={VERDE} />
-          <Text style={styles.textoVolver}>Volver</Text>
-        </TouchableOpacity>
+      {/* 3. AQUÍ ENVOLVEMOS TODO CON EL KEYBOARD AVOIDING VIEW */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.contenido} 
+          keyboardShouldPersistTaps="handled"
+        >
+          <TouchableOpacity style={styles.volver} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={VERDE} />
+            <Text style={styles.textoVolver}>Volver</Text>
+          </TouchableOpacity>
 
-        <Text style={styles.titulo}>Crear Entrenador</Text>
-        <Text style={styles.subtitulo}>Completa los datos para registrar un nuevo entrenador.</Text>
+          <Text style={styles.titulo}>Crear Entrenador</Text>
+          <Text style={styles.subtitulo}>Completa los datos para registrar un nuevo entrenador.</Text>
 
-        <Text style={styles.label}>Nombres *</Text>
-        <TextInput 
-          style={styles.input} 
-          value={nombres} 
-          onChangeText={(texto) => setNombres(soloLetras(texto))} 
-          placeholder="Nombres" 
-          placeholderTextColor="#666" 
-        />
+          <Text style={styles.label}>Nombres *</Text>
+          <TextInput 
+            style={styles.input} 
+            value={nombres} 
+            onChangeText={(texto) => setNombres(soloLetras(texto))} 
+            placeholder="Nombres" 
+            placeholderTextColor="#666" 
+          />
 
-        <Text style={styles.label}>Apellidos *</Text>
-        <TextInput 
-          style={styles.input} 
-          value={apellidos} 
-          onChangeText={(texto) => setApellidos(soloLetras(texto))} 
-          placeholder="Apellidos" 
-          placeholderTextColor="#666" 
-        />
+          <Text style={styles.label}>Apellidos *</Text>
+          <TextInput 
+            style={styles.input} 
+            value={apellidos} 
+            onChangeText={(texto) => setApellidos(soloLetras(texto))} 
+            placeholder="Apellidos" 
+            placeholderTextColor="#666" 
+          />
 
-        <Text style={styles.label}>Correo electrónico *</Text>
-        <TextInput 
-          style={styles.input} 
-          value={correo} 
-          onChangeText={setCorreo} 
-          placeholder="correo@ejemplo.com" 
-          keyboardType="email-address" 
-          autoCapitalize="none" 
-          placeholderTextColor="#666" 
-        />
+          <Text style={styles.label}>Correo electrónico *</Text>
+          <TextInput 
+            style={styles.input} 
+            value={correo} 
+            onChangeText={setCorreo} 
+            placeholder="correo@ejemplo.com" 
+            keyboardType="email-address" 
+            autoCapitalize="none" 
+            placeholderTextColor="#666" 
+          />
 
-        <Text style={styles.label}>Teléfono (10 dígitos) *</Text>
-        <TextInput 
-          style={styles.input} 
-          value={telefono} 
-          onChangeText={(t) => setTelefono(t.replace(/\D/g, "").slice(0, 10))} 
-          placeholder="3001234567" 
-          keyboardType="phone-pad" 
-          placeholderTextColor="#666" 
-        />
+          <Text style={styles.label}>Teléfono (10 dígitos) *</Text>
+          <TextInput 
+            style={styles.input} 
+            value={telefono} 
+            onChangeText={(t) => setTelefono(t.replace(/\D/g, "").slice(0, 10))} 
+            placeholder="3001234567" 
+            keyboardType="phone-pad" 
+            placeholderTextColor="#666" 
+          />
 
-        <Text style={styles.label}>Contraseña *</Text>
-        <TextInput 
-          style={styles.input} 
-          value={contrasena} 
-          onChangeText={setContrasena} 
-          placeholder="Mínimo 6 caracteres" 
-          secureTextEntry 
-          placeholderTextColor="#666" 
-        />
+          <Text style={styles.label}>Contraseña *</Text>
+          <TextInput 
+            style={styles.input} 
+            value={contrasena} 
+            onChangeText={setContrasena} 
+            placeholder="Mínimo 6 caracteres" 
+            secureTextEntry 
+            placeholderTextColor="#666" 
+          />
 
-        <Text style={styles.label}>Fecha de nacimiento (AAAA-MM-DD) *</Text>
-        <TextInput 
-          style={styles.input} 
-          value={fechaNacimiento} 
-          onChangeText={formatearFecha} 
-          placeholder="2000-01-01" 
-          keyboardType="numeric" 
-          placeholderTextColor="#666" 
-        />
+          <Text style={styles.label}>Fecha de nacimiento (AAAA-MM-DD) *</Text>
+          <TextInput 
+            style={styles.input} 
+            value={fechaNacimiento} 
+            onChangeText={formatearFecha} 
+            placeholder="2000-01-01" 
+            keyboardType="numeric" 
+            placeholderTextColor="#666" 
+          />
 
-        <Text style={styles.label}>Tipo de documento *</Text>
-        <View style={styles.filaDocs}>
-          {["CC", "TI", "CE", "PASAPORTE"].map((tipo) => (
-            <TouchableOpacity
-              key={tipo}
-              style={[styles.chipDoc, tipoDocumento === tipo && styles.chipDocActivo]}
-              onPress={() => { setTipoDocumento(tipo); setNumeroDocumento(""); }}
-            >
-              <Text style={[styles.textoChipDoc, tipoDocumento === tipo && styles.textoChipDocActivo]}>{tipo}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+          <Text style={styles.label}>Tipo de documento *</Text>
+          <View style={styles.filaDocs}>
+            {["CC", "TI", "CE", "PASAPORTE"].map((tipo) => (
+              <TouchableOpacity
+                key={tipo}
+                style={[styles.chipDoc, tipoDocumento === tipo && styles.chipDocActivo]}
+                onPress={() => { setTipoDocumento(tipo); setNumeroDocumento(""); }}
+              >
+                <Text style={[styles.textoChipDoc, tipoDocumento === tipo && styles.textoChipDocActivo]}>{tipo}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        <Text style={styles.label}>Número de documento *</Text>
-        <TextInput
-          style={styles.input}
-          value={numeroDocumento}
-          onChangeText={(t) => {
-            if (tipoDocumento === "PASAPORTE") {
-              setNumeroDocumento(t.slice(0, 15).toUpperCase());
-            } else {
-              setNumeroDocumento(t.replace(/\D/g, "").slice(0, 10));
-            }
-          }}
-          placeholder={tipoDocumento === "PASAPORTE" ? "Hasta 15 caracteres" : "10 dígitos"}
-          keyboardType={tipoDocumento === "PASAPORTE" ? "default" : "numeric"}
-          placeholderTextColor="#666"
-        />
+          <Text style={styles.label}>Número de documento *</Text>
+          <TextInput
+            style={styles.input}
+            value={numeroDocumento}
+            onChangeText={(t) => {
+              if (tipoDocumento === "PASAPORTE") {
+                setNumeroDocumento(t.slice(0, 15).toUpperCase());
+              } else {
+                setNumeroDocumento(t.replace(/\D/g, "").slice(0, 10));
+              }
+            }}
+            placeholder={tipoDocumento === "PASAPORTE" ? "Hasta 15 caracteres" : "10 dígitos"}
+            keyboardType={tipoDocumento === "PASAPORTE" ? "default" : "numeric"}
+            placeholderTextColor="#666"
+          />
 
-        <TouchableOpacity style={styles.botonGuardar} onPress={guardar} disabled={cargando}>
-          {cargando ? <ActivityIndicator color="#000" /> : <Text style={styles.textoBotonGuardar}>CREAR ENTRENADOR</Text>}
-        </TouchableOpacity>
-      </ScrollView>
+          <TouchableOpacity style={styles.botonGuardar} onPress={guardar} disabled={cargando}>
+            {cargando ? <ActivityIndicator color="#000" /> : <Text style={styles.textoBotonGuardar}>CREAR ENTRENADOR</Text>}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: FONDO },
-  contenido: { padding: 20 },
+  contenido: { 
+    padding: 20,
+    paddingBottom: 120 // <-- 4. EL TRUCO DEL ESPACIO EXTRA
+  },
   volver: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20 },
   textoVolver: { color: VERDE, fontSize: 14, fontWeight: "bold" },
   titulo: { color: "#FFF", fontSize: 26, fontWeight: "900", marginBottom: 5 },

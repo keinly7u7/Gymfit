@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 
-import { API_URL } from "../constants/api";
+import { API_URL } from "../../constants/api";
 
 
 type Beneficio = {

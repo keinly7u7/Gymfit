@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from "react";
  // Agrega useCallback
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { API_URL } from "../../constants/api";
+import { API_URL } from "../constants/api";
 
 const VERDE = "#E8FF47";
 const FONDO = "#0A0A0A";
@@ -22,15 +22,37 @@ export default function DashboardUsuario() {
   const [data, setData] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
 
-  const listaBeneficios = useMemo(() => {
-    try { return JSON.parse(params.beneficios?.toString() || "[]"); } 
-    catch { return []; }
-  }, [params.beneficios]);
+const listaBeneficios = useMemo(() => {
+  try {
+    const raw = params.beneficios;
+    const str = Array.isArray(raw) ? raw[0] : raw;
+    const parsed = JSON.parse(str?.toString() || "[]");
+    if (!Array.isArray(parsed)) return [];
+    // Normaliza a strings en mayúsculas por si vienen como objetos
+    return parsed.map((b: any) =>
+      typeof b === "string" ? b.toUpperCase() : String(b?.nombre ?? "").toUpperCase()
+    );
+  } catch {
+    return [];
+  }
+}, [params.beneficios]);
 
-  const tieneEntrenador = listaBeneficios.includes("ENTRENADOR_ASIGNADO");
-  const seguimientoDetallado = listaBeneficios.includes("SEGUIMIENTO_DETALLADO");
-  const rutinasPersonalizadas = listaBeneficios.includes("RUTINAS_PERSONALIZADAS");
+// Normaliza nombre de plan para fallbacks
+const nombrePlanLower = (params.nombre_plan?.toString() || "").toLowerCase();
 
+const tieneEntrenador =
+  listaBeneficios.some((b) => b.includes("ENTRENADOR")) ||
+  nombrePlanLower.includes("intermedio") ||
+  nombrePlanLower.includes("premium");
+
+const rutinasPersonalizadas =
+  listaBeneficios.some((b) => b.includes("RUTINAS_PERSONALIZADAS")) ||
+  nombrePlanLower.includes("intermedio") ||
+  nombrePlanLower.includes("premium");
+
+const seguimientoDetallado =
+  listaBeneficios.some((b) => b.includes("SEGUIMIENTO_DETALLADO")) ||
+  nombrePlanLower.includes("premium");
   useFocusEffect(
     useCallback(() => {
       let activo = true;
@@ -78,7 +100,7 @@ export default function DashboardUsuario() {
         {/* ENCABEZADO */}
         <View style={styles.encabezado}>
           <View>
-    
+            <Text style={styles.saludoPequeno}>Buenos días</Text>
             <Text style={styles.saludo}>¡Hola, {nombre.split(" ")[0]}! 👋</Text>
             <Text style={styles.planTexto}>Plan {nombrePlan} · {estado}</Text>
           </View>

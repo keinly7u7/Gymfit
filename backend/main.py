@@ -297,15 +297,7 @@ def dashboard_cliente(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
         "rutinas_completadas": rutinas_completadas
     }
 
-@app.post("/api/completar-rutina", status_code=201)
-def completar_rutina(datos: RutinaCompletadaIn, u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
-    cur = db.cursor()
-    cur.execute("SELECT id_cliente FROM clientes WHERE id_usuario=%s", (u["id_usuario"],))
-    id_c = cur.fetchone()[0]
-    cur.execute("INSERT INTO rutinas_completadas (id_cliente, nombre_rutina) VALUES (%s, %s)", (id_c, datos.nombre_rutina))
-    db.commit()
-    cur.close()
-    return {"mensaje": "¡Rutina completada!"}
+
 
 @app.get("/api/mis-rutinas")
 def mis_rutinas(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
@@ -812,5 +804,83 @@ def reservar_cita(datos: dict, u=Depends(requiere_rol("cliente")), db=Depends(ge
     except Exception as e:
         db.rollback()
         raise HTTPException(500, f"Error: {e}")
+    finally:
+        cur.close()
+
+@app.get("/api/mis-rutinas-completadas")
+def mis_rutinas_completadas(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
+    cur = db.cursor(dictionary=True)
+    
+    print("========================================")
+    print("ENTRÓ AL GET DE PROGRESO")
+    print("DATOS DEL TOKEN (usuario logueado):", u)
+    
+    cur.execute("SELECT id_cliente, correo FROM clientes c JOIN usuarios u ON u.id_usuario = c.id_usuario WHERE c.id_usuario=%s", (u["id_usuario"],))
+    # Nota: si tu tabla clientes no tiene correo, quita el JOIN y deja solo SELECT id_cliente...
+    
+    row = cur.fetchone()
+    print("CLIENTE ENCONTRADO EN LA BD:", row)
+    
+    if not row:
+        print("❌ NO SE ENCONTRÓ EL CLIENTE")
+        cur.close()
+        return []
+        
+    id_cliente = row["id_cliente"]
+    print("BUSCANDO RUTINAS PARA EL ID_CLIENTE:", id_cliente)
+    
+    cur.execute(
+        "SELECT id_completada, nombre_rutina, fecha_completada "
+        "FROM rutinas_completadas WHERE id_cliente=%s "
+        "ORDER BY fecha_completada DESC",
+        (id_cliente,),
+    )
+    rutinas = cur.fetchall()
+    print("RUTINAS ENCONTRADAS:", rutinas)
+    print("========================================")
+    
+    cur.close()
+    
+    for r in rutinas:
+        if hasattr(r["fecha_completada"], "isoformat"):
+            r["fecha_completada"] = r["fecha_completada"].isoformat()
+    return rutinas
+# --- POST PARA GUARDAR RUTINA COMPLETADA ---
+@app.post("/api/completar-rutina")
+def completar_rutina(datos: dict, u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
+    print("=== COMPLETAR RUTINA ===")
+    print("BODY:", datos)
+    print("USUARIO:", u)
+
+    nombre = datos.get("nombre_rutina")
+    if not nombre:
+        raise HTTPException(400, "Falta el nombre de la rutina")
+
+    cur = db.cursor(dictionary=True)
+    try:
+        # 1. Obtener id_cliente del usuario logueado
+        cur.execute("SELECT id_cliente FROM clientes WHERE id_usuario=%s", (u["id_usuario"],))
+        row = cur.fetchone()
+        print("CLIENTE:", row)
+        if not row:
+            raise HTTPException(404, "Cliente no encontrado")
+        id_cliente = row["id_cliente"]
+
+        # 2. Insertar en la tabla
+        cur.execute(
+            "INSERT INTO rutinas_completadas (id_cliente, nombre_rutina) VALUES (%s, %s)",
+            (id_cliente, nombre),
+        )
+        db.commit()
+        print("INSERT OK -> id_cliente:", id_cliente, "nombre:", nombre)
+        return {"ok": True, "nombre_rutina": nombre}
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        print("ERROR INSERT:", e)
+        raise HTTPException(500, f"Error al completar rutina: {e}")
     finally:
         cur.close()

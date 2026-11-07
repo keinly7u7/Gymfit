@@ -14,18 +14,18 @@ export default function RutinasPersonalizadas() {
   const [rutinas, setRutinas] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
 
-  useEffect(() => {
-    async function cargar() {
-      const token = await SecureStore.getItemAsync("access_token");
-      const res = await fetch(`${API_URL}/api/mis-rutinas`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        // Filtramos solo las personalizadas (es_general === 0)
-        setRutinas(data.filter((r: any) => r.es_general === 0));
-      }
-      setCargando(false);
+  const cargarRutinas = async () => {
+    const token = await SecureStore.getItemAsync("access_token");
+    const res = await fetch(`${API_URL}/api/mis-rutinas`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) {
+      const data = await res.json();
+      setRutinas(data.filter((r: any) => r.es_general === 0));
     }
-    cargar();
+    setCargando(false);
+  };
+
+  useEffect(() => {
+    cargarRutinas();
   }, []);
 
   return (
@@ -53,12 +53,15 @@ export default function RutinasPersonalizadas() {
                 <Text style={styles.objetivo}>{rutina.nivel.toUpperCase()}</Text>
               </View>
               <Text style={styles.descripcion}>{rutina.descripcion}</Text>
-                            <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.botonVer}
-                onPress={() => router.push({ 
-                  pathname: "/rutinas-detalle-personalizada", 
-                  params: { id_rutina: rutina.id_rutina } 
-                } as any)}
+                onPress={() =>
+                  router.push({
+                    pathname: "/rutinas-detalle-personalizada",
+                    params: { id_rutina: rutina.id_rutina },
+                  } as any)
+                }
               >
                 <Text style={styles.textoBoton}>Ver ejercicios</Text>
                 <Ionicons name="arrow-forward" size={18} color="#000" />
