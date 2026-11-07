@@ -1,1 +1,1 @@
-export const API_URL = "http://192.168.80.29:8000";
+export const API_URL = "https://gymfit-0ix6.onrender.com";
