@@ -100,7 +100,7 @@ const seguimientoDetallado =
         {/* ENCABEZADO */}
         <View style={styles.encabezado}>
           <View>
-            <Text style={styles.saludoPequeno}>Buenos días</Text>
+          
             <Text style={styles.saludo}>¡Hola, {nombre.split(" ")[0]}! 👋</Text>
             <Text style={styles.planTexto}>Plan {nombrePlan} · {estado}</Text>
           </View>
