@@ -3,7 +3,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { RUTINAS_DATA } from "./rutinasData";
+import { RUTINAS_DATA } from "../data/rutinasData";
 
 const VERDE = "#E8FF47";
 const FONDO = "#0A0A0A";

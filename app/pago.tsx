@@ -5,7 +5,6 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -15,8 +14,8 @@ import {
 } from "react-native";
 
 // Usa aquí la misma URL del backend que utilizas en el login.
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_URL } from "../constants/api";
-
 
 export default function PagoScreen() {
   const params = useLocalSearchParams<{

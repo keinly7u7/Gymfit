@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { EJERCICIOS_DATA } from "./ejercicios/ejerciciosdata";
+import { EJERCICIOS_DATA } from "../data/ejerciciosdata";
 
 const VERDE = "#E8FF47";
 const FONDO = "#0A0A0A";

@@ -1,4 +1,3 @@
-
 import { Tabs } from "expo-router";
 
 import { HapticTab } from "@/components/haptic-tab";
@@ -38,13 +37,6 @@ export default function TabLayout() {
               color={color}
             />
           ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="login"
-        options={{
-          href: null,
         }}
       />
     </Tabs>

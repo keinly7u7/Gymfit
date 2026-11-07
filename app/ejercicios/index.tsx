@@ -3,7 +3,7 @@ import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { EJERCICIOS_DATA } from "./ejerciciosdata";
+import { EJERCICIOS_DATA } from "../../data/ejerciciosdata";
 
 const VERDE = "#E8FF47";
 const FONDO = "#0A0A0A";
