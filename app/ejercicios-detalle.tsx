@@ -2,76 +2,75 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { EJERCICIOS_DATA } from "../data/ejerciciosdata";
 
 const VERDE = "#E8FF47";
 const FONDO = "#0A0A0A";
 const TARJETA = "#141414";
 
-export default function DetalleEjercicioScreen() {
-  const { id_ejercicio } = useLocalSearchParams<{ id_ejercicio: string }>();
-  
-  // Buscamos el ejercicio por su ID
-  const ejercicio = EJERCICIOS_DATA.find((e) => e.id === Number(id_ejercicio));
-
-  if (!ejercicio) {
-    return (
-      <SafeAreaView style={styles.centro}>
-        <Text style={{ color: "#FFF" }}>Ejercicio no encontrado</Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 20 }}>
-          <Text style={{ color: VERDE }}>Volver</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
+export default function EjercicioDetalle() {
+  // VOLVEMOS A RECIBIR LOS PARÁMETROS DINÁMICOS
+  const { nombre, grupo, nivel, descripcion, imagen, maquina, instrucciones, mostrar_series } = useLocalSearchParams();
 
   return (
-    <SafeAreaView style={styles.contenedor}>
-      <ScrollView contentContainerStyle={styles.contenido}>
-        <TouchableOpacity style={styles.volver} onPress={() => router.back()}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={VERDE} />
-          <Text style={styles.textoVolver}>Volver a ejercicios</Text>
+          <Text style={styles.backText}>Volver</Text>
         </TouchableOpacity>
 
-        <Image source={{ uri: ejercicio.imagen }} style={styles.imagenPrincipal} />
-        
-        <Text style={styles.titulo}>{ejercicio.nombre}</Text>
-        <Text style={styles.subtitulo}>{ejercicio.grupo} · {ejercicio.nivel}</Text>
+        {/* Ahora la imagen viene de los parámetros */}
+        <Image source={{ uri: imagen as string }} style={styles.image} />
 
-        <View style={styles.seccion}>
-          <Text style={styles.label}>Descripción</Text>
-          <Text style={styles.texto}>{ejercicio.descripcion}</Text>
-        </View>
+        <Text style={styles.title}>{nombre}</Text>
+        <Text style={styles.subtitle}>{grupo} · {nivel}</Text>
 
-        <View style={styles.seccion}>
-          <Text style={styles.label}>Máquina / Equipo</Text>
-          <View style={styles.filaMaquina}>
-            <Ionicons name="barbell-outline" size={20} color={VERDE} />
-            <Text style={[styles.texto, { marginLeft: 10 }]}>{ejercicio.maquina}</Text>
+        {/* TARJETA DE SERIES (SOLO SI VIENE DE UNA RUTINA) */}
+        {mostrar_series === "true" && (
+          <View style={styles.seriesCard}>
+            <Ionicons name="barbell-outline" size={24} color={VERDE} />
+            <View style={styles.seriesInfo}>
+              <Text style={styles.seriesTitle}>RUTINA A SEGUIR</Text>
+              <Text style={styles.seriesText}>3 series x 10-12 repeticiones</Text>
+            </View>
           </View>
+        )}
+
+        <Text style={styles.sectionTitle}>Descripción</Text>
+        <Text style={styles.text}>{descripcion}</Text>
+        
+        <Text style={styles.sectionTitle}>Máquina / Equipo</Text>
+        <View style={styles.equipoRow}>
+          <Ionicons name="construct-outline" size={18} color="#AAA" />
+          <Text style={[styles.text, { marginLeft: 8 }]}>{maquina}</Text>
         </View>
 
-        <View style={styles.seccion}>
-          <Text style={styles.label}>Instrucciones</Text>
-          <Text style={styles.texto}>{ejercicio.instrucciones}</Text>
+        <Text style={styles.sectionTitle}>Instrucciones</Text>
+        <View style={styles.instructionsBox}>
+          <Text style={styles.instructionsText}>{instrucciones}</Text>
         </View>
 
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: FONDO },
-  contenido: { padding: 20 },
-  centro: { flex: 1, backgroundColor: FONDO, justifyContent: "center", alignItems: "center" },
-  volver: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20 },
-  textoVolver: { color: VERDE, fontSize: 14, fontWeight: "bold" },
-  imagenPrincipal: { width: "100%", height: 220, borderRadius: 20, backgroundColor: TARJETA, marginBottom: 20 },
-  titulo: { color: "#FFF", fontSize: 26, fontWeight: "900", marginBottom: 5 },
-  subtitulo: { color: VERDE, fontSize: 13, fontWeight: "bold", marginBottom: 25 },
-  seccion: { backgroundColor: TARJETA, borderRadius: 15, padding: 15, marginBottom: 15, borderWidth: 1, borderColor: "#222" },
-  label: { color: "#777", fontSize: 11, fontWeight: "bold", textTransform: "uppercase", marginBottom: 8 },
-  texto: { color: "#DDD", fontSize: 14, lineHeight: 22 },
-  filaMaquina: { flexDirection: "row", alignItems: "center" }
+  container: { flex: 1, backgroundColor: FONDO },
+  content: { padding: 20 },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 20, marginTop: 10 },
+  backText: { color: VERDE, fontSize: 14, fontWeight: "bold" },
+  image: { width: "100%", height: 220, borderRadius: 15, backgroundColor: "#1A1A1A" },
+  title: { color: "#FFF", fontSize: 26, fontWeight: "900", marginTop: 15 },
+  subtitle: { color: VERDE, fontSize: 14, fontWeight: "bold", marginBottom: 20 },
+  seriesCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#1A220A", padding: 16, borderRadius: 12, borderWidth: 1, borderColor: "#3A4A1A", marginBottom: 20, gap: 12 },
+  seriesInfo: { flex: 1 },
+  seriesTitle: { color: VERDE, fontSize: 10, fontWeight: "900", letterSpacing: 1 },
+  seriesText: { color: "#FFF", fontSize: 16, fontWeight: "bold", marginTop: 4 },
+  sectionTitle: { color: "#FFF", fontSize: 16, fontWeight: "bold", marginTop: 15, marginBottom: 8 },
+  text: { color: "#AAA", fontSize: 14, lineHeight: 22 },
+  equipoRow: { flexDirection: "row", alignItems: "center" },
+  instructionsBox: { backgroundColor: TARJETA, padding: 15, borderRadius: 12, borderWidth: 1, borderColor: "#222" },
+  instructionsText: { color: "#DDD", fontSize: 14, lineHeight: 24 },
 });

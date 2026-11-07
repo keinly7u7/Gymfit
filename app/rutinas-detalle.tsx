@@ -14,7 +14,6 @@ const TARJETA = "#141414";
 export default function DetalleRutinaScreen() {
   const { id_rutina } = useLocalSearchParams<{ id_rutina: string }>();
   
-  // Buscamos la rutina por su ID
   const rutina = RUTINAS_DATA.find((r) => r.id === Number(id_rutina));
   
   if (!rutina) {
@@ -28,7 +27,6 @@ export default function DetalleRutinaScreen() {
     );
   }
 
-  // Obtener los ejercicios de esa rutina
   const ejerciciosRutina = (rutina as any).ejerciciosIds.map((id: number) => 
     EJERCICIOS_DATA.find((e) => e.id === id)
   ).filter(Boolean);
@@ -67,7 +65,26 @@ export default function DetalleRutinaScreen() {
         <Text style={styles.subtitulo}>EJERCICIOS A REALIZAR</Text>
 
         {ejerciciosRutina.map((ej: any, index: number) => (
-          <View key={ej.id} style={styles.tarjeta}>
+          <TouchableOpacity 
+            key={ej.id} 
+            style={styles.tarjeta}
+            onPress={() => {
+              router.push({
+                pathname: "/ejercicios-detalle",
+                params: {
+                  id: ej.id,
+                  nombre: ej.nombre,
+                  grupo: ej.grupo,
+                  nivel: ej.nivel,
+                  descripcion: ej.descripcion,
+                  imagen: ej.imagen,
+                  maquina: ej.maquina,
+                  instrucciones: ej.instrucciones,
+                  mostrar_series: "true", // <-- AQUÍ SE ENVÍA EL PARÁMETRO
+                }
+              });
+            }}
+          >
             <Image source={{ uri: ej.imagen }} style={styles.imagenEjercicio} />
             <View style={styles.infoEjercicio}>
               <View style={styles.numeroContainer}>
@@ -77,10 +94,10 @@ export default function DetalleRutinaScreen() {
               <Text style={styles.grupo}>{ej.grupo} · {ej.nivel}</Text>
               <Text style={styles.descripcion}>{ej.descripcion}</Text>
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={20} color="#666" style={{ alignSelf: "center" }} />
+          </TouchableOpacity>
         ))}
 
-        {/* BOTÓN DE COMPLETAR AL FINAL */}
         <TouchableOpacity style={styles.botonCompletar} onPress={completarRutina}>
           <Ionicons name="checkmark-circle" size={22} color="#000" />
           <Text style={styles.textoBotonCompletar}>MARCAR COMO COMPLETADA</Text>
@@ -99,7 +116,6 @@ const styles = StyleSheet.create({
   titulo: { color: "#FFF", fontSize: 26, fontWeight: "900", marginBottom: 5 },
   detalles: { color: "#A5A5A5", fontSize: 13, marginBottom: 25 },
   subtitulo: { color: "#FFF", fontSize: 16, fontWeight: "bold", marginBottom: 15 },
-  
   tarjeta: { flexDirection: "row", backgroundColor: TARJETA, padding: 12, borderRadius: 15, marginBottom: 12, borderWidth: 1, borderColor: "#222", gap: 12 },
   imagenEjercicio: { width: 80, height: 80, borderRadius: 10, backgroundColor: "#1A1A1A" },
   infoEjercicio: { flex: 1, justifyContent: "center" },
@@ -108,7 +124,6 @@ const styles = StyleSheet.create({
   nombreEjercicio: { color: "#FFF", fontSize: 16, fontWeight: "bold", paddingRight: 20 },
   grupo: { color: VERDE, fontSize: 11, fontWeight: "bold", marginTop: 4 },
   descripcion: { color: "#777", fontSize: 12, marginTop: 6, lineHeight: 18 },
-  
   botonCompletar: { backgroundColor: VERDE, flexDirection: "row", justifyContent: "center", alignItems: "center", padding: 16, borderRadius: 12, marginTop: 20, gap: 8 },
-  textoBotonCompletar: { color: "#000", fontSize: 14, fontWeight: "900", textTransform: "uppercase" }
+  textoBotonCompletar: { color: "#000", fontSize: 14, fontWeight: "900", textTransform: "uppercase" },
 });

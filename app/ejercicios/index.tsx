@@ -70,7 +70,7 @@ export default function EjerciciosScreen() {
         </ScrollView>
       </View>
 
-      {/* LISTA DE EJERCICIOS - CADA TARJETA ES UN BOTÓN */}
+      {/* LISTA DE EJERCICIOS */}
       <FlatList
         data={ejerciciosFiltrados}
         keyExtractor={(item) => String(item.id)}
@@ -84,7 +84,15 @@ export default function EjerciciosScreen() {
             activeOpacity={0.7}
             onPress={() => router.push({ 
               pathname: "/ejercicios-detalle", 
-              params: { id_ejercicio: item.id } 
+              params: { 
+                nombre: item.nombre,
+                grupo: item.grupo,
+                nivel: item.nivel,
+                descripcion: item.descripcion,
+                imagen: item.imagen,
+                maquina: item.maquina,
+                instrucciones: item.instrucciones,
+              } 
             } as any)}
           >
             <Image source={{ uri: item.imagen }} style={styles.imagenEjercicio} />

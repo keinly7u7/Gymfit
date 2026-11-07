@@ -24,7 +24,6 @@ TOKEN_HORAS = 24
 _hasher = PasswordHasher()
 
 # --- CONFIGURACIÓN DE LA BASE DE DATOS PARA RENDER/AIVEN ---
-# Si estamos en Render, el host NO será 127.0.0.1
 DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
 
 _pool = pooling.MySQLConnectionPool(
@@ -275,7 +274,6 @@ def dashboard_cliente(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
     cur.execute("SELECT id_cliente FROM clientes WHERE id_usuario=%s", (u["id_usuario"],))
     id_c = cur.fetchone()["id_cliente"]
 
-    # 1. Rutina activa (asignada)
     cur.execute("""
         SELECT r.nombre, r.nivel, r.id_rutina,
                (SELECT COUNT(*) FROM rutina_ejercicios WHERE id_rutina = r.id_rutina) as total_ejercicios
@@ -286,11 +284,9 @@ def dashboard_cliente(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
     """, (id_c,))
     rutina_hoy = cur.fetchone()
 
-    # 2. Días activos (asistencias totales)
     cur.execute("SELECT COUNT(*) as total FROM asistencias WHERE id_cliente=%s", (id_c,))
     asistencias = cur.fetchone()["total"]
 
-    # 3. Rutinas completadas
     cur.execute("SELECT COUNT(*) as total FROM rutinas_completadas WHERE id_cliente=%s", (id_c,))
     rutinas_completadas = cur.fetchone()["total"]
 
@@ -311,15 +307,37 @@ def completar_rutina(datos: RutinaCompletadaIn, u=Depends(requiere_rol("cliente"
     cur.close()
     return {"mensaje": "¡Rutina completada!"}
 
-@app.get("/api/mis-rutinas-completadas")
-def mis_rutinas_completadas(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
+@app.get("/api/mis-rutinas")
+def mis_rutinas(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
     cur.execute("SELECT id_cliente FROM clientes WHERE id_usuario=%s", (u["id_usuario"],))
-    id_c = cur.fetchone()["id_cliente"]
-    cur.execute("SELECT id_completada, nombre_rutina, fecha_completada FROM rutinas_completadas WHERE id_cliente=%s ORDER BY fecha_completada DESC", (id_c,))
-    r = cur.fetchall()
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        raise HTTPException(404, "Cliente no encontrado")
+    id_c = row["id_cliente"]
+
+    cur.execute("""
+        SELECT ar.id_asignacion_rutina, ar.fecha_inicio, ar.estado, 
+               r.id_rutina, r.nombre, r.descripcion, r.nivel, 0 as es_general
+        FROM asignaciones_rutinas ar 
+        JOIN rutinas r ON r.id_rutina = ar.id_rutina 
+        WHERE ar.id_cliente=%s AND ar.estado='activa'
+    """, (id_c,))
+    personalizadas = cur.fetchall()
+
+    for r in personalizadas:
+        cur.execute("""
+            SELECT e.id_ejercicio, e.nombre, e.grupo_muscular, 
+                   re.series, re.repeticiones 
+            FROM rutina_ejercicios re 
+            JOIN ejercicios e ON e.id_ejercicio = re.id_ejercicio 
+            WHERE re.id_rutina=%s ORDER BY re.orden
+        """, (r["id_rutina"],))
+        r["ejercicios"] = cur.fetchall()
+
     cur.close()
-    return r
+    return personalizadas
 
 @app.get("/api/mis-asistencias")
 def mis_asistencias(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
@@ -382,7 +400,7 @@ class CrearRutinaIn(BaseModel):
     nombre: str
     descripcion: str
     nivel: str = "principiante"
-    ejercicios: List[dict] = []  # Cada dict: {"id_ejercicio": int, "series": int, "repeticiones": str}
+    ejercicios: List[dict] = []
 
 @app.post("/api/entrenador/crear-rutina", status_code=201)
 def crear_rutina(datos: CrearRutinaIn, u=Depends(requiere_rol("entrenador")), db=Depends(get_db)):
@@ -409,6 +427,7 @@ def crear_rutina(datos: CrearRutinaIn, u=Depends(requiere_rol("entrenador")), db
         db.rollback()
         cur.close()
         raise HTTPException(500, f"Error: {e}")
+
 @app.get("/api/entrenador/rutinas")
 def listar_rutinas_entrenador(u=Depends(requiere_rol("entrenador")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
@@ -487,105 +506,17 @@ def asignar_entrenador(datos: dict, u=Depends(requiere_rol("administrador")), db
     finally:
         cur.close()
 
-@app.get("/api/mis-rutinas")
-def mis_rutinas(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
-    cur = db.cursor(dictionary=True)
-    cur.execute("SELECT id_cliente FROM clientes WHERE id_usuario=%s", (u["id_usuario"],))
-    row = cur.fetchone()
-    if not row:
-        cur.close()
-        raise HTTPException(404, "Cliente no encontrado")
-    id_c = row["id_cliente"]
-
-    cur.execute("""
-        SELECT ar.id_asignacion_rutina, ar.fecha_inicio, ar.estado, 
-               r.id_rutina, r.nombre, r.descripcion, r.nivel, 0 as es_general
-        FROM asignaciones_rutinas ar 
-        JOIN rutinas r ON r.id_rutina = ar.id_rutina 
-        WHERE ar.id_cliente=%s AND ar.estado='activa'
-    """, (id_c,))
-    personalizadas = cur.fetchall()
-
-    for r in personalizadas:
-        cur.execute("""
-            SELECT e.id_ejercicio, e.nombre, e.grupo_muscular, 
-                   re.series, re.repeticiones 
-            FROM rutina_ejercicios re 
-            JOIN ejercicios e ON e.id_ejercicio = re.id_ejercicio 
-            WHERE re.id_rutina=%s ORDER BY re.orden
-        """, (r["id_rutina"],))
-        r["ejercicios"] = cur.fetchall()
-
-    cur.close()
-    return personalizadas
-
-@app.post("/api/registrar-mi-asistencia", status_code=201)
-def registrar_mi_asistencia(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
-    cur = db.cursor(dictionary=True)
-    cur.execute("SELECT id_cliente FROM clientes WHERE id_usuario=%s", (u["id_usuario"],))
-    row = cur.fetchone()
-    if not row:
-        cur.close()
-        raise HTTPException(404, "Cliente no encontrado")
-    id_c = row["id_cliente"]
-    
-    # Verificamos que no haya registrado hoy para no duplicar
-    cur.execute("SELECT id_asistencia FROM asistencias WHERE id_cliente=%s AND DATE(fecha_hora_entrada)=CURDATE()", (id_c,))
-    if cur.fetchone():
-        cur.close()
-        raise HTTPException(400, "Ya registraste tu asistencia hoy.")
-    
-    cur.execute("INSERT INTO asistencias (id_cliente) VALUES (%s)", (id_c,))
-    db.commit()
-    cur.close()
-    return {"mensaje": "¡Asistencia registrada! Buen entrenamiento."}
-
-@app.get("/api/cliente/dashboard")
-def dashboard_cliente(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
-    cur = db.cursor(dictionary=True)
-    cur.execute("SELECT id_cliente FROM clientes WHERE id_usuario=%s", (u["id_usuario"],))
-    id_c = cur.fetchone()["id_cliente"]
-
-    # 1. Rutina activa (asignada)
-    cur.execute("""
-        SELECT r.nombre, r.nivel, r.id_rutina,
-               (SELECT COUNT(*) FROM rutina_ejercicios WHERE id_rutina = r.id_rutina) as total_ejercicios
-        FROM asignaciones_rutinas ar
-        JOIN rutinas r ON r.id_rutina = ar.id_rutina
-        WHERE ar.id_cliente = %s AND ar.estado = 'activa'
-        LIMIT 1
-    """, (id_c,))
-    rutina_hoy = cur.fetchone()
-
-    # 2. Días activos (asistencias totales)
-    cur.execute("SELECT COUNT(*) as total FROM asistencias WHERE id_cliente=%s", (id_c,))
-    asistencias = cur.fetchone()["total"]
-
-    # 3. Rutinas completadas (NUEVO)
-    cur.execute("SELECT COUNT(*) as total FROM rutinas_completadas WHERE id_cliente=%s", (id_c,))
-    rutinas_completadas = cur.fetchone()["total"]
-
-    cur.close()
-    return {
-        "rutina_hoy": rutina_hoy,
-        "dias_activos": asistencias,
-        "rutinas_completadas": rutinas_completadas
-    }
-
 @app.get("/api/entrenador/estadisticas")
 def estadisticas_entrenador(u=Depends(requiere_rol("entrenador")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
     id_entrenador = u["id_usuario"]
 
-    # 1. Cantidad de clientes asignados
     cur.execute("SELECT COUNT(*) as total FROM entrenador_clientes WHERE id_entrenador=%s AND estado='activa'", (id_entrenador,))
     clientes = cur.fetchone()["total"]
 
-    # 2. Cantidad de rutinas creadas
     cur.execute("SELECT COUNT(*) as total FROM rutinas WHERE id_entrenador=%s", (id_entrenador,))
     rutinas = cur.fetchone()["total"]
 
-    # 3. Cantidad de asignaciones activas
     cur.execute("SELECT COUNT(*) as total FROM asignaciones_rutinas WHERE id_entrenador=%s AND estado='activa'", (id_entrenador,))
     asignaciones = cur.fetchone()["total"]
 
@@ -599,22 +530,11 @@ def estadisticas_entrenador(u=Depends(requiere_rol("entrenador")), db=Depends(ge
 @app.get("/api/entrenador/cliente/{id_cliente}")
 def detalle_cliente_entrenador(id_cliente: int, u=Depends(requiere_rol("entrenador")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
-    # Verificar que el cliente esté asignado a este entrenador
     cur.execute("SELECT 1 FROM entrenador_clientes WHERE id_entrenador=%s AND id_cliente=%s AND estado='activa'", (u["id_usuario"], id_cliente))
     if not cur.fetchone():
         cur.close()
         raise HTTPException(403, "Este cliente no está asignado a ti")
 
-@app.get("/api/entrenador/cliente/{id_cliente}")
-def detalle_cliente_entrenador(id_cliente: int, u=Depends(requiere_rol("entrenador")), db=Depends(get_db)):
-    cur = db.cursor(dictionary=True)
-    # Verificar que el cliente esté asignado a este entrenador
-    cur.execute("SELECT 1 FROM entrenador_clientes WHERE id_entrenador=%s AND id_cliente=%s AND estado='activa'", (u["id_usuario"], id_cliente))
-    if not cur.fetchone():
-        cur.close()
-        raise HTTPException(403, "Este cliente no está asignado a ti")
-
-    # Datos del cliente
     cur.execute("""
         SELECT u.nombres, u.apellidos, u.correo, u.telefono, c.nivel_experiencia
         FROM clientes c JOIN usuarios u ON u.id_usuario = c.id_usuario
@@ -622,15 +542,12 @@ def detalle_cliente_entrenador(id_cliente: int, u=Depends(requiere_rol("entrenad
     """, (id_cliente,))
     cliente = cur.fetchone()
 
-    # Rutinas completadas
     cur.execute("SELECT COUNT(*) as total FROM rutinas_completadas WHERE id_cliente=%s", (id_cliente,))
     rutinas_completadas = cur.fetchone()["total"]
 
-    # Asistencias
     cur.execute("SELECT COUNT(*) as total FROM asistencias WHERE id_cliente=%s", (id_cliente,))
     asistencias = cur.fetchone()["total"]
 
-    # Historial de rutinas completadas (últimas 10)
     cur.execute("""
         SELECT nombre_rutina, fecha_completada 
         FROM rutinas_completadas 
@@ -651,12 +568,10 @@ def detalle_cliente_entrenador(id_cliente: int, u=Depends(requiere_rol("entrenad
 def eliminar_rutina(id_rutina: int, u=Depends(requiere_rol("entrenador")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
     try:
-        # Verificar que la rutina existe
         cur.execute("SELECT id_rutina FROM rutinas WHERE id_rutina=%s", (id_rutina,))
         if not cur.fetchone():
             raise HTTPException(404, "Rutina no encontrada")
         
-        # Eliminar la rutina
         cur.execute("DELETE FROM rutinas WHERE id_rutina=%s", (id_rutina,))
         db.commit()
         cur.close()
@@ -720,11 +635,9 @@ def listar_asistencias_admin(u=Depends(requiere_rol("administrador")), db=Depend
 def reportes(u=Depends(requiere_rol("administrador")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
     
-    # 1. Ingresos totales
     cur.execute("SELECT COALESCE(SUM(monto), 0) as total FROM pagos WHERE estado='aprobado'")
     ingresos = float(cur.fetchone()["total"])
     
-    # 2. Membresías activas por plan
     cur.execute("""
         SELECT p.nombre, COUNT(m.id_membresia) as total
         FROM planes p
@@ -733,15 +646,12 @@ def reportes(u=Depends(requiere_rol("administrador")), db=Depends(get_db)):
     """)
     por_plan = cur.fetchall()
     
-    # 3. Total de membresías
     cur.execute("SELECT COUNT(*) as total FROM membresias")
     total_membresias = cur.fetchone()["total"]
     
-    # 4. Asistencias del mes
     cur.execute("SELECT COUNT(*) as total FROM asistencias WHERE MONTH(fecha_hora_entrada)=MONTH(CURDATE()) AND YEAR(fecha_hora_entrada)=YEAR(CURDATE())")
     asistencias_mes = cur.fetchone()["total"]
     
-    # 5. Rutinas completadas del mes
     cur.execute("SELECT COUNT(*) as total FROM rutinas_completadas WHERE MONTH(fecha_completada)=MONTH(CURDATE()) AND YEAR(fecha_completada)=YEAR(CURDATE())")
     rutinas_mes = cur.fetchone()["total"]
     
@@ -826,7 +736,7 @@ def eliminar_disponibilidad(id: int, u=Depends(requiere_rol("entrenador")), db=D
     finally:
         cur.close()
 
-# --- DISPONIBILIDAD PARA EL CLIENTE (con nombre del entrenador) ---
+# --- DISPONIBILIDAD PARA EL CLIENTE ---
 @app.get("/api/cliente/disponibilidad-entrenador")
 def disponibilidad_para_cliente(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
