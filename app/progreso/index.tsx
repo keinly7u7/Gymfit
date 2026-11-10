@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { API_URL } from "../../constants/api";
 
@@ -14,6 +14,7 @@ export default function MiProgreso() {
   const [rutinas, setRutinas] = useState<any[]>([]);
   const [asistencias, setAsistencias] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [registrando, setRegistrando] = useState(false); // Para el botón
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -26,39 +27,20 @@ export default function MiProgreso() {
         fetch(`${API_URL}/api/mis-asistencias`, { headers }),
       ]);
 
-      // --- RUTINAS ---
       const textoRut = await resRut.text();
-      console.log("STATUS RUTINAS:", resRut.status);
-      console.log("BODY RUTINAS:", textoRut);
-
       if (resRut.ok) {
         try {
           const json = JSON.parse(textoRut);
-          // Acepta array directo o {rutinas/data: [...]}
-          const lista = Array.isArray(json)
-            ? json
-            : Array.isArray(json.rutinas)
-              ? json.rutinas
-              : Array.isArray(json.data)
-                ? json.data
-                : [];
+          const lista = Array.isArray(json) ? json : json.rutinas || json.data || [];
           setRutinas(lista);
-        } catch (e) {
-          console.log("Error parseando rutinas:", e);
-          setRutinas([]);
-        }
-      } else {
-        setRutinas([]);
-      }
+        } catch (e) { setRutinas([]); }
+      } else { setRutinas([]); }
 
-      // --- ASISTENCIAS ---
       if (resAsis.ok) {
         try {
           const jsonAsis = await resAsis.json();
           setAsistencias(Array.isArray(jsonAsis) ? jsonAsis : jsonAsis.data ?? []);
-        } catch {
-          setAsistencias([]);
-        }
+        } catch { setAsistencias([]); }
       }
     } catch (e) {
       console.log("ERROR FATAL:", e);
@@ -73,14 +55,38 @@ export default function MiProgreso() {
     }, [])
   );
 
+  // --- FUNCIÓN PARA REGISTRAR ASISTENCIA ---
+  const registrarAsistencia = async () => {
+    if (registrando) return;
+    setRegistrando(true);
+    const token = await SecureStore.getItemAsync("access_token");
+
+    try {
+      const res = await fetch(`${API_URL}/api/registrar-mi-asistencia`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        Alert.alert("¡Éxito!", data.mensaje || "Asistencia registrada correctamente.");
+        cargarDatos(); // Recarga la lista para que aparezca la nueva
+      } else {
+        Alert.alert("Aviso", data.detail || "No se pudo registrar la asistencia.");
+      }
+    } catch (e) {
+      Alert.alert("Error", "Problema de conexión con el servidor.");
+    } finally {
+      setRegistrando(false);
+    }
+  };
+
   const formatearFecha = (iso: string) => {
     if (!iso) return "Sin fecha";
     const d = new Date(iso);
     if (isNaN(d.getTime())) return "Sin fecha";
     return d.toLocaleDateString("es-CO", {
-      weekday: "long",
-      day: "numeric",
-      month: "short",
+      weekday: "long", day: "numeric", month: "short",
     });
   };
 
@@ -111,18 +117,27 @@ export default function MiProgreso() {
             <View key={r.id_completada ?? `r-${i}`} style={styles.cardRutina}>
               <Ionicons name="checkmark-circle" size={22} color={VERDE} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.nombreRutina}>
-                  {r.nombre_rutina ?? r.nombre ?? "Rutina"}
-                </Text>
-                <Text style={styles.fecha}>
-                  {formatearFecha(r.fecha_completada ?? r.fecha)}
-                </Text>
+                <Text style={styles.nombreRutina}>{r.nombre_rutina ?? r.nombre ?? "Rutina"}</Text>
+                <Text style={styles.fecha}>{formatearFecha(r.fecha_completada ?? r.fecha)}</Text>
               </View>
             </View>
           ))
         )}
 
-        <Text style={styles.subtitulo}>ASISTENCIAS ({asistencias.length})</Text>
+        {/* SECCIÓN DE ASISTENCIAS CON BOTÓN */}
+        <View style={styles.filaTituloAsistencia}>
+          <Text style={styles.subtitulo}>ASISTENCIAS ({asistencias.length})</Text>
+          <TouchableOpacity style={styles.botonAsistencia} onPress={registrarAsistencia} disabled={registrando}>
+            {registrando ? (
+              <ActivityIndicator color="#000" size="small" />
+            ) : (
+              <>
+                <Ionicons name="add-circle" size={16} color="#000" />
+                <Text style={styles.textoBotonAsistencia}>REGISTRAR</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
 
         {asistencias.length === 0 ? (
           <Text style={styles.vacio}>Aún no has registrado asistencias.</Text>
@@ -130,9 +145,7 @@ export default function MiProgreso() {
           asistencias.map((a: any, i: number) => (
             <View key={a.id_asistencia ?? `a-${i}`} style={styles.cardAsistencia}>
               <Ionicons name="calendar-outline" size={20} color="#4FC3F7" />
-              <Text style={styles.textoAsistencia}>
-                {formatearFecha(a.fecha_hora_entrada ?? a.fecha)}
-              </Text>
+              <Text style={styles.textoAsistencia}>{formatearFecha(a.fecha_hora_entrada ?? a.fecha)}</Text>
             </View>
           ))
         )}
@@ -154,4 +167,9 @@ const styles = StyleSheet.create({
   fecha: { color: "#777", fontSize: 12, marginTop: 3 },
   cardAsistencia: { flexDirection: "row", alignItems: "center", backgroundColor: TARJETA, padding: 15, borderRadius: 10, marginBottom: 8, gap: 12 },
   textoAsistencia: { color: "#AAA", fontSize: 14 },
+  
+  // Estilos nuevos para el botón
+  filaTituloAsistencia: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 10 },
+  botonAsistencia: { backgroundColor: VERDE, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, gap: 4 },
+  textoBotonAsistencia: { color: "#000", fontSize: 10, fontWeight: "900" },
 });

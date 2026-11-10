@@ -729,6 +729,8 @@ def eliminar_disponibilidad(id: int, u=Depends(requiere_rol("entrenador")), db=D
         cur.close()
 
 # --- DISPONIBILIDAD PARA EL CLIENTE ---
+from datetime import date, datetime, time, timedelta
+
 @app.get("/api/cliente/disponibilidad-entrenador")
 def disponibilidad_para_cliente(u=Depends(requiere_rol("cliente")), db=Depends(get_db)):
     cur = db.cursor(dictionary=True)
@@ -749,6 +751,7 @@ def disponibilidad_para_cliente(u=Depends(requiere_rol("cliente")), db=Depends(g
     if not ent:
         cur.close()
         return {"entrenador": None, "horarios": []}
+    
     id_entrenador = ent["id_entrenador"]
     nombre_entrenador = ent["nombre_entrenador"]
 
@@ -761,16 +764,35 @@ def disponibilidad_para_cliente(u=Depends(requiere_rol("cliente")), db=Depends(g
     """, (id_entrenador,))
     r = cur.fetchall()
     cur.close()
+
+    # CONVERSIÓN A PRUEBA DE FALLOS
     for item in r:
-        if hasattr(item["hora_inicio"], "seconds"):
-            h, m = divmod(item["hora_inicio"].seconds // 60, 60)
+        # Convertir hora_inicio
+        if isinstance(item["hora_inicio"], timedelta):
+            total_seconds = int(item["hora_inicio"].total_seconds())
+            h, m = divmod(total_seconds // 60, 60)
             item["hora_inicio"] = f"{h:02d}:{m:02d}"
-        if hasattr(item["hora_fin"], "seconds"):
-            h, m = divmod(item["hora_fin"].seconds // 60, 60)
+        elif isinstance(item["hora_inicio"], time):
+            item["hora_inicio"] = item["hora_inicio"].strftime("%H:%M")
+        else:
+            item["hora_inicio"] = str(item["hora_inicio"])[:5]
+
+        # Convertir hora_fin
+        if isinstance(item["hora_fin"], timedelta):
+            total_seconds = int(item["hora_fin"].total_seconds())
+            h, m = divmod(total_seconds // 60, 60)
             item["hora_fin"] = f"{h:02d}:{m:02d}"
-        if hasattr(item["fecha"], "isoformat"):
-            item["fecha"] = item["fecha"].isoformat()
-    
+        elif isinstance(item["hora_fin"], time):
+            item["hora_fin"] = item["hora_fin"].strftime("%H:%M")
+        else:
+            item["hora_fin"] = str(item["hora_fin"])[:5]
+
+        # Convertir fecha
+        if isinstance(item["fecha"], (date, datetime)):
+            item["fecha"] = item["fecha"].strftime("%Y-%m-%d")
+        else:
+            item["fecha"] = str(item["fecha"])
+
     return {"entrenador": nombre_entrenador, "horarios": r}
 
 @app.post("/api/cliente/reservar-cita")
